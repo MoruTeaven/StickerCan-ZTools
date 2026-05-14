@@ -248,6 +248,19 @@ class EmotionManager {
             });
         }
         
+        // 处理外部链接点击事件
+        document.querySelectorAll('[data-external-link="true"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const url = link.getAttribute('href');
+                if (typeof utools !== 'undefined' && utools.shellOpenExternal) {
+                    utools.shellOpenExternal(url);
+                } else {
+                    window.open(url, '_blank');
+                }
+            });
+        });
+        
         console.log('setupEventListeners() 完成');
     }
 
