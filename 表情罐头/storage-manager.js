@@ -516,4 +516,50 @@ class StorageManager {
     getImageSrc(emotion) {
         return emotion.url;
     }
+
+    async getFileFromLocal(emotion) {
+        try {
+            // 尝试使用 Node.js 方式读取本地文件
+            if (window.emotionCan && typeof window.emotionCan.readFile === 'function') {
+                const filePath = emotion.url.replace('file://', '').replace(/\//g, '\\');
+                const result = await window.emotionCan.readFile(filePath);
+                if (result && result.base64 && result.fileName) {
+                    const mimeType = this.getMimeTypeFromFileName(result.fileName);
+                    const binaryString = atob(result.base64);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const blob = new Blob([bytes], { type: mimeType });
+                    return new File([blob], result.fileName, { type: mimeType });
+                }
+            }
+            
+            // 回退到浏览器方式
+            const response = await this.fetchWithTimeout(emotion.url);
+            if (!response.ok) {
+                throw new Error('无法读取本地文件');
+            }
+            const blob = await response.blob();
+            const fileName = emotion.metadata?.originalName || 'emotion_' + Date.now() + '.' + this.getExtensionFromMimeType(blob.type);
+            return new File([blob], fileName, { type: blob.type });
+        } catch (error) {
+            console.error('读取本地文件失败:', error);
+            throw new Error('读取本地文件失败: ' + error.message);
+        }
+    }
+
+    getMimeTypeFromFileName(fileName) {
+        const ext = fileName.split('.').pop().toLowerCase();
+        const mimeMap = {
+            'png': 'image/png',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'bmp': 'image/bmp',
+            'svg': 'image/svg+xml'
+        };
+        return mimeMap[ext] || 'image/png';
+    }
 }

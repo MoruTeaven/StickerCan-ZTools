@@ -563,8 +563,21 @@
             </div>
             <div class="modal-body">
                 <div class="emotion-detail">
-                    <div class="emotion-image-wrapper">
-                        <img id="modalImage" src="" alt="表情包">
+                    <div class="emotion-images-container">
+                        <div class="emotion-image-wrapper local-wrapper" id="localImageWrapper" style="display: none;">
+                            <div class="image-label">
+                                <i class="mdi mdi-folder"></i>
+                                <span>本地</span>
+                            </div>
+                            <img id="modalLocalImage" src="" alt="本地图片">
+                        </div>
+                        <div class="emotion-image-wrapper cloud-wrapper" id="cloudImageWrapper" style="display: none;">
+                            <div class="image-label">
+                                <i class="mdi mdi-cloud"></i>
+                                <span>云端</span>
+                            </div>
+                            <img id="modalCloudImage" src="" alt="云端图片">
+                        </div>
                     </div>
                     <div class="emotion-info">
                         <div class="info-section">
@@ -589,6 +602,10 @@
                 <button id="copyBtn" class="btn btn-success">
                     <i class="mdi mdi-content-copy"></i>
                     <span>复制到剪贴板</span>
+                </button>
+                <button id="convertBtn" class="btn btn-info">
+                    <i class="mdi mdi-swap-horizontal"></i>
+                    <span>保存到本地</span>
                 </button>
                 <button id="editTagsBtn" class="btn btn-warning">
                     <i class="mdi mdi-tag"></i>

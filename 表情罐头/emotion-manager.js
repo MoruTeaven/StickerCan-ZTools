@@ -235,6 +235,13 @@ class EmotionManager {
             });
         }
 
+        const convertBtn = document.getElementById('convertBtn');
+        if (convertBtn) {
+            convertBtn.addEventListener('click', () => {
+                this.convertCurrentEmotionStorage();
+            });
+        }
+
         const tagInput = document.getElementById('tagInput');
         if (tagInput) {
             tagInput.addEventListener('keypress', (e) => {
@@ -549,8 +556,33 @@ class EmotionManager {
     async showEmotionDetail(emotion) {
         this.currentEmotion = emotion;
         
-        const modalImage = document.getElementById('modalImage');
-        modalImage.src = emotion.url;
+        const localWrapper = document.getElementById('localImageWrapper');
+        const cloudWrapper = document.getElementById('cloudImageWrapper');
+        const localImage = document.getElementById('modalLocalImage');
+        const cloudImage = document.getElementById('modalCloudImage');
+        
+        localWrapper.style.display = 'none';
+        cloudWrapper.style.display = 'none';
+        
+        if (emotion.storageType === 'cloud') {
+            cloudImage.src = emotion.url;
+            cloudWrapper.style.display = 'block';
+            
+            const pairedLocal = this.findPairedEmotion(emotion, 'local');
+            if (pairedLocal) {
+                localImage.src = pairedLocal.url;
+                localWrapper.style.display = 'block';
+            }
+        } else {
+            localImage.src = emotion.url;
+            localWrapper.style.display = 'block';
+            
+            const pairedCloud = this.findPairedEmotion(emotion, 'cloud');
+            if (pairedCloud) {
+                cloudImage.src = pairedCloud.url;
+                cloudWrapper.style.display = 'block';
+            }
+        }
         
         const badge = document.getElementById('storageBadge');
         badge.className = 'storage-badge ' + emotion.storageType;
@@ -564,6 +596,30 @@ class EmotionManager {
             badgeText.textContent = emotion.storageType === 'cloud' ? '云端存储' : '本地存储';
         }
         
+        const convertBtn = document.getElementById('convertBtn');
+        if (convertBtn) {
+            const hasPair = emotion.storageType === 'cloud' 
+                ? this.findPairedEmotion(emotion, 'local') 
+                : this.findPairedEmotion(emotion, 'cloud');
+            
+            if (hasPair) {
+                if (emotion.storageType === 'cloud') {
+                    convertBtn.innerHTML = '<i class="mdi mdi-check-circle"></i><span>已存在本地</span>';
+                    convertBtn.disabled = true;
+                } else {
+                    convertBtn.innerHTML = '<i class="mdi mdi-check-circle"></i><span>已存在云端</span>';
+                    convertBtn.disabled = true;
+                }
+            } else {
+                if (emotion.storageType === 'cloud') {
+                    convertBtn.innerHTML = '<i class="mdi mdi-folder-download"></i><span>保存到本地</span>';
+                } else {
+                    convertBtn.innerHTML = '<i class="mdi mdi-cloud-upload"></i><span>上传到云端</span>';
+                }
+                convertBtn.disabled = false;
+            }
+        }
+        
         document.getElementById('tagList').innerHTML = emotion.tags.map(tag => 
             '<span class="tag">' + this.escapeHtml(tag) + '</span>'
         ).join('');
@@ -573,6 +629,23 @@ class EmotionManager {
         document.getElementById('editTagsBtn').innerHTML = '<i class="mdi mdi-tag"></i><span>编辑标签</span>';
         
         this.showModal('emotionModal');
+    }
+    
+    findPairedEmotion(emotion, targetType) {
+        const targetEmotions = targetType === 'local' 
+            ? this.dataManager.emotions.local 
+            : this.dataManager.emotions.cloud;
+        
+        return targetEmotions.find(e => {
+            const hasOriginalUrl = e.metadata && 
+                ((targetType === 'local' && e.metadata.originalCloudUrl === emotion.url) ||
+                 (targetType === 'cloud' && e.metadata.originalLocalPath === emotion.url));
+            
+            const hasMatchingTags = e.tags.length > 0 && 
+                e.tags.every(tag => emotion.tags.includes(tag));
+            
+            return hasOriginalUrl || hasMatchingTags;
+        });
     }
 
     async copyEmotionToClipboard() {
@@ -1173,6 +1246,93 @@ class EmotionManager {
             this.showMessage('图仓配置已保存，请点击保存设置', 'info');
         } else {
             this.showMessage('请检查云存储配置', 'info');
+        }
+    }
+
+    async convertCurrentEmotionStorage() {
+        if (!this.currentEmotion) return;
+        
+        try {
+            if (this.currentEmotion.storageType === 'cloud') {
+                // 云端 → 本地
+                const configHint = this.storageManager.getLocalConfigHint();
+                if (configHint) {
+                    this.showMessage(configHint, 'error');
+                    return;
+                }
+                
+                // 检查是否已存在本地副本
+                const existingLocal = this.dataManager.emotions.local.find(e => 
+                    e.tags.join(',') === this.currentEmotion.tags.join(',') && 
+                    e.createdAt === this.currentEmotion.createdAt
+                );
+                if (existingLocal) {
+                    this.showMessage('该表情包已存在本地副本', 'info');
+                    return;
+                }
+                
+                this.showMessage('正在保存到本地...', 'info');
+                const finalUrl = await this.storageManager.downloadAndSaveToLocal(this.currentEmotion.url);
+                
+                const newEmotion = {
+                    id: this.dataManager.generateId(),
+                    url: finalUrl,
+                    storageType: 'local',
+                    tags: [...this.currentEmotion.tags],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    metadata: {
+                        originalCloudUrl: this.currentEmotion.url
+                    }
+                };
+                
+                this.dataManager.addEmotion(newEmotion, 'local');
+                await this.dataManager.saveData();
+                this.renderAllViews();
+                this.showMessage('表情包已保存到本地', 'success');
+                
+            } else {
+                // 本地 → 云端
+                const configHint = this.storageManager.getCloudConfigHint();
+                if (configHint) {
+                    this.showMessage(configHint, 'error');
+                    return;
+                }
+                
+                // 检查是否已存在云端副本
+                const existingCloud = this.dataManager.emotions.cloud.find(e => 
+                    e.tags.join(',') === this.currentEmotion.tags.join(',') && 
+                    e.createdAt === this.currentEmotion.createdAt
+                );
+                if (existingCloud) {
+                    this.showMessage('该表情包已存在云端副本', 'info');
+                    return;
+                }
+                
+                this.showMessage('正在上传到云端...', 'info');
+                const file = await this.storageManager.getFileFromLocal(this.currentEmotion);
+                const finalUrl = await this.storageManager.uploadToCloud(file);
+                
+                const newEmotion = {
+                    id: this.dataManager.generateId(),
+                    url: finalUrl,
+                    storageType: 'cloud',
+                    tags: [...this.currentEmotion.tags],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    metadata: {
+                        originalLocalPath: this.currentEmotion.url
+                    }
+                };
+                
+                this.dataManager.addEmotion(newEmotion, 'cloud');
+                await this.dataManager.saveData();
+                this.renderAllViews();
+                this.showMessage('表情包已上传到云端', 'success');
+            }
+        } catch (error) {
+            console.error('转换存储位置失败:', error);
+            this.showMessage('转换失败: ' + error.message, 'error');
         }
     }
 }
