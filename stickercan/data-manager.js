@@ -7,7 +7,7 @@ class DataManager {
         this.settings = null;
         this.migrationDone = false;
         // 获取设备 ID，用于区别设备
-        this.nativeId = utools.getNativeId();
+        this.nativeId = window.ztools.getNativeId();
     }
 
     async loadData() {
@@ -15,25 +15,25 @@ class DataManager {
             console.log('===== 开始加载数据 =====');
             console.log('当前设备 ID:', this.nativeId);
             
-            // 加载本地表情包（utools.dbStorage，不会同步）
+            // 加载本地表情包（ztools.dbStorage，不会同步）
             // 使用设备 ID 作为 key 前缀，确保只与当前设备相关
             const localEmotionsKey = this.nativeId + '/emotions_local';
-            const localEmotions = utools.dbStorage.getItem(localEmotionsKey);
+            const localEmotions = window.ztools.dbStorage.getItem(localEmotionsKey);
             if (localEmotions && Array.isArray(localEmotions)) {
                 this.emotions.local = localEmotions;
                 console.log('本地表情包加载成功，数量:', this.emotions.local.length);
             } else {
                 // 尝试从旧的 key 迁移数据
-                const oldLocalEmotions = utools.dbStorage.getItem('emotions_local');
+                const oldLocalEmotions = window.ztools.dbStorage.getItem('emotions_local');
                 if (oldLocalEmotions && Array.isArray(oldLocalEmotions)) {
                     console.log('检测到旧的本地数据，迁移到新的 key');
                     this.emotions.local = oldLocalEmotions;
-                    utools.dbStorage.setItem(localEmotionsKey, this.emotions.local);
+                    window.ztools.dbStorage.setItem(localEmotionsKey, this.emotions.local);
                 }
             }
             
-            // 加载云端表情包（utools.db，会同步）
-            const cloudData = await utools.db.promises.get('emotions_cloud');
+            // 加载云端表情包（ztools.db，会同步）
+            const cloudData = await window.ztools.db.promises.get('emotions_cloud');
             if (cloudData && cloudData.data && Array.isArray(cloudData.data)) {
                 this.emotions.cloud = cloudData.data;
                 console.log('云端表情包加载成功，数量:', this.emotions.cloud.length);
@@ -42,7 +42,7 @@ class DataManager {
             // 检查是否需要从旧的单一结构迁移数据
             const hasOldData = await this.checkOldData();
             if (hasOldData) {
-                const oldData = await utools.db.promises.get('emotions');
+                const oldData = await window.ztools.db.promises.get('emotions');
                 if (oldData && oldData.data && Array.isArray(oldData.data)) {
                     console.log('检测到旧数据，开始迁移...');
                     await this.migrateOldData(oldData.data);
@@ -51,7 +51,7 @@ class DataManager {
             }
             
             // 加载设置
-            const settingsData = await utools.db.promises.get('settings');
+            const settingsData = await window.ztools.db.promises.get('settings');
             if (settingsData) {
                 this.settings = settingsData.data;
                 console.log('设置加载成功:', this.settings);
@@ -97,9 +97,9 @@ class DataManager {
     async checkOldData() {
         try {
             // 检查是否有旧的单一结构数据
-            const oldData = await utools.db.promises.get('emotions');
+            const oldData = await window.ztools.db.promises.get('emotions');
             const localEmotionsKey = this.nativeId + '/emotions_local';
-            const localData = utools.dbStorage.getItem(localEmotionsKey);
+            const localData = window.ztools.dbStorage.getItem(localEmotionsKey);
             
             // 只有同时存在旧数据且新数据为空时才迁移
             return oldData && oldData.data && Array.isArray(oldData.data) && 
@@ -139,11 +139,11 @@ class DataManager {
             // 保存本地表情包到 dbStorage（不会同步）
             // 使用设备 ID 作为 key 前缀，确保只与当前设备相关
             const localEmotionsKey = this.nativeId + '/emotions_local';
-            utools.dbStorage.setItem(localEmotionsKey, this.emotions.local);
+            window.ztools.dbStorage.setItem(localEmotionsKey, this.emotions.local);
             console.log('本地表情包保存成功，key:', localEmotionsKey);
             
             // 保存云端表情包到 db（会同步）
-            const existingCloud = await utools.db.promises.get('emotions_cloud');
+            const existingCloud = await window.ztools.db.promises.get('emotions_cloud');
             const cloudDoc = {
                 _id: 'emotions_cloud',
                 data: this.emotions.cloud
@@ -151,7 +151,7 @@ class DataManager {
             if (existingCloud && existingCloud._rev) {
                 cloudDoc._rev = existingCloud._rev;
             }
-            const cloudResult = await utools.db.promises.put(cloudDoc);
+            const cloudResult = await window.ztools.db.promises.put(cloudDoc);
             console.log('云端表情包保存成功:', cloudResult);
             
             console.log('===== 表情包数据保存完成 =====');
@@ -166,7 +166,7 @@ class DataManager {
             console.log('===== 开始保存设置 =====');
             console.log('准备保存的 settings:', this.settings);
             
-            const existingSettings = await utools.db.promises.get('settings');
+            const existingSettings = await window.ztools.db.promises.get('settings');
             const settingsDoc = {
                 _id: 'settings',
                 data: this.settings
@@ -175,7 +175,7 @@ class DataManager {
                 settingsDoc._rev = existingSettings._rev;
             }
             
-            const result = await utools.db.promises.put(settingsDoc);
+            const result = await window.ztools.db.promises.put(settingsDoc);
             console.log('设置保存成功:', result);
             
             console.log('===== 保存流程结束 =====');

@@ -144,9 +144,9 @@ class StorageManager {
 
     async selectLocalFolder() {
         try {
-            if (typeof utools !== 'undefined' && utools.showOpenDialog) {
+            if (window.ztools && window.ztools.showOpenDialog) {
                 try {
-                    const result = await utools.showOpenDialog({
+                    const result = await window.ztools.showOpenDialog({
                         properties: ['openDirectory', 'createDirectory']
                     });
                     if (Array.isArray(result) && result.length > 0) {
@@ -157,7 +157,7 @@ class StorageManager {
                         return;
                     }
                 } catch (apiError) {
-                    console.log('uTools showOpenDialog 调用失败:', apiError);
+                    console.log('ZTools showOpenDialog 调用失败:', apiError);
                 }
             }
             
@@ -323,7 +323,7 @@ class StorageManager {
             );
             return result;
         } else {
-            throw new Error('Node.js环境不可用，无法上传到S3。请确保在uTools环境中运行此插件。');
+            throw new Error('Node.js环境不可用，无法上传到S3。请确保在ZTools环境中运行此插件。');
         }
     }
 

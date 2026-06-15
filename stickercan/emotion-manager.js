@@ -297,8 +297,8 @@ class EmotionManager {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const url = link.getAttribute('href');
-                if (typeof utools !== 'undefined' && utools.shellOpenExternal) {
-                    utools.shellOpenExternal(url);
+                if (window.ztools && window.ztools.shellOpenExternal) {
+                    window.ztools.shellOpenExternal(url);
                 } else {
                     window.open(url, '_blank');
                 }
@@ -691,7 +691,7 @@ class EmotionManager {
             ctx.drawImage(img, 0, 0);
             
             const imageData = canvas.toDataURL('image/png');
-            utools.copyImage(imageData);
+            window.ztools.copyImage(imageData);
             this.showMessage('已复制到剪贴板', 'success');
             return;
             
@@ -709,10 +709,10 @@ class EmotionManager {
             
             reader.onload = (e) => {
                 try {
-                    utools.copyImage(e.target.result);
+                    window.ztools.copyImage(e.target.result);
                     this.showMessage('已复制到剪贴板', 'success');
                 } catch (copyError) {
-                    console.error('utools.copyImage 失败:', copyError);
+                    console.error('ztools.copyImage 失败:', copyError);
                     this.showMessage(getErrorMessage(copyError), 'error');
                 }
             };

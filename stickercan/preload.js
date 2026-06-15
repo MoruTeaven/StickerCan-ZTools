@@ -1,4 +1,4 @@
-// preload.js - uTools预加载脚本
+// preload.js - ZTools预加载脚本
 // 此文件在插件初始化时加载，可用于Node.js环境下的操作
 
 console.log('表情罐头插件 preload.js 已加载');
@@ -14,17 +14,17 @@ window.emotionCan = {
   // 选择文件夹 - 使用多种方式兼容
   selectFolder: async function() {
     try {
-      // 方式1: 直接使用 utools.showOpenDialog
-      if (typeof utools !== 'undefined' && utools.showOpenDialog) {
+      // 方式1: 直接使用 ZTools showOpenDialog
+      if (window.ztools && window.ztools.showOpenDialog) {
         try {
-          const result = await utools.showOpenDialog({
+          const result = await window.ztools.showOpenDialog({
             properties: ['openDirectory', 'createDirectory']
           });
           if (Array.isArray(result) && result.length > 0) {
             return result[0];
           }
         } catch (e) {
-          console.log('utools.showOpenDialog 失败，尝试其他方法');
+          console.log('ZTools showOpenDialog 失败，尝试其他方法');
         }
       }
 

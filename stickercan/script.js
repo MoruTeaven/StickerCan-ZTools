@@ -30,8 +30,8 @@ function initUserInfo() {
     const userAvatar = document.getElementById('userAvatar');
     const userNickname = document.getElementById('userNickname');
     
-    if (typeof utools !== 'undefined') {
-        const user = utools.getUser();
+    if (window.ztools) {
+        const user = typeof window.ztools.getUser === 'function' ? window.ztools.getUser() : null;
         if (user) {
             userAvatar.src = user.avatar;
             userNickname.textContent = user.nickname;
@@ -44,25 +44,39 @@ function initUserInfo() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (typeof utools !== 'undefined') {
+    if (window.ztools) {
         emotionManager = new EmotionManager();
         emotionManager.init();
         initUserInfo();
     } else {
-        console.warn('不在uTools环境中，使用localStorage模拟数据存储');
+        console.warn('不在ZTools环境中，使用localStorage模拟数据存储');
         
-        // 模拟 uTools
-        window.utools = {
+        // 模拟 ZTools
+        window.ztools = {
             db: {
-                async get(key) {
+                get(key) {
                     const value = localStorage.getItem(key);
                     return value ? JSON.parse(value) : null;
                 },
-                async put(doc) {
+                put(doc) {
                     localStorage.setItem(doc._id, JSON.stringify(doc));
+                    return { id: doc._id, rev: Date.now().toString(), ok: true };
                 },
-                async remove(key) {
-                    localStorage.removeItem(key);
+                remove(docOrId) {
+                    localStorage.removeItem(typeof docOrId === 'string' ? docOrId : docOrId._id);
+                    return { ok: true };
+                }
+            },
+            dbStorage: {
+                setItem(key, value) {
+                    localStorage.setItem('dbStorage:' + key, JSON.stringify(value));
+                },
+                getItem(key) {
+                    const value = localStorage.getItem('dbStorage:' + key);
+                    return value ? JSON.parse(value) : null;
+                },
+                removeItem(key) {
+                    localStorage.removeItem('dbStorage:' + key);
                 }
             },
             copyImage(imageData) {
@@ -71,8 +85,19 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             getUser() {
                 return null;
+            },
+            getNativeId() {
+                return 'dev-native-id';
+            },
+            shellOpenExternal(url) {
+                window.open(url, '_blank');
+            },
+            showOpenDialog() {
+                const folderPath = prompt('请输入本地存储路径（例如：C:/表情罐头）');
+                return folderPath ? [folderPath] : undefined;
             }
         };
+        window.ztools.db.promises = window.ztools.db;
 
         // 模拟 emotionCan API（用于开发调试）
         window.emotionCan = {
