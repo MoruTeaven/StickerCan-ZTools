@@ -1,0 +1,11 @@
+.codebuddy/
+node_modules/
+.DS_Store
+AGENTS.md
+项目缺陷报告.md
+Thumbs.db
+*.log
+*.tmp
+*.bak
+*.swp
+*~
